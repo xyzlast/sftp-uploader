@@ -5,7 +5,7 @@ const fs = require('fs'),
   bluebird = require('bluebird'),
   events = require('events');
 
-class Deployer extends events.EventEmitter {
+class ScpDeployer extends events.EventEmitter {
   constructor(options) {
     super();
     this.files = [];
@@ -61,4 +61,4 @@ class Deployer extends events.EventEmitter {
   }
 }
 
-module.exports = Deployer;
+module.exports.ScpDeployer = ScpDeployer;

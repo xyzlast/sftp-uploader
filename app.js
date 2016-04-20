@@ -8,7 +8,7 @@ const config = require('./env/' + process.env.NODE_ENV);
 const param = process.argv[2].replace(/-/gi, '');
 const Promise = require('bluebird');
 const command = require('./command');
-const SshClient = require('ssh-promise');
+const _ = require('lodash');
 
 console.log('STEP1. fms-api: git pull');
 command('git', ['pull'], { cwd: config.apiDevPath }).then(() => {
@@ -20,8 +20,8 @@ command('git', ['pull'], { cwd: config.apiDevPath }).then(() => {
   }
 }).then(() => {
   console.log('STEP. UPLOAD FILES: ' + param);
-  const Deployer = require('./deployer');
-  const _ = require('lodash');
+  const ScpDeployer = require('./scp-deployer').ScpDeployer;
+
   let targets = config.targets;
   if (param !== 'all') {
     targets = _.filter(config.targets, function (c) {
@@ -31,8 +31,8 @@ command('git', ['pull'], { cwd: config.apiDevPath }).then(() => {
   const funcs = [];
   targets.forEach(target => {
     funcs.push(new Promise(resolve => {
-      const deployer = new Deployer(target);
-      deployer.on('error', function(err){
+      const scpDeployer = new ScpDeployer(target);
+      scpDeployer.on('error', function(err){
         if (err) {
           console.error(err);
         }
@@ -45,7 +45,7 @@ command('git', ['pull'], { cwd: config.apiDevPath }).then(() => {
         process.stdout.write('O');
         resolve(true);
       });
-      deployer.upload();
+      scpDeployer.upload();
     }));
   });
   return Promise.all(funcs);
@@ -55,9 +55,10 @@ command('git', ['pull'], { cwd: config.apiDevPath }).then(() => {
   }
   console.log('');
   console.log('execute command to ADWAS1');
-  const ssh1Commands = [
-    'pm2 kill',
-    'pm2 start /home/krobis/apps/fms-api-v2/api-system1.json'
+  const commands = [
+    { cmd: 'pm2 kill' },
+    { cmd: 'npm install', cwd: '/home/krobis/apps/fms-api-v2'},
+    { cmd: 'pm2 start /home/krobis/apps/fms-api-v2/api-system1.json' }
   ];
   const sshOptions = {
     host: '14.63.170.47',
@@ -65,17 +66,16 @@ command('git', ['pull'], { cwd: config.apiDevPath }).then(() => {
     username: 'krobis',
     privateKey: require('fs').readFileSync(config.rsaKeyPath)
   };
-  const ssh1 = new SshClient(sshOptions);
-  return ssh1.exec(ssh1Commands);
+  return executeSshCommands(sshOptions, commands);
 }).then(() => {
   if (param !== 'api' && param !== 'all') {
     return Promise.resolve(true);
   }
-  console.log('');
   console.log('execute command to ADWAS2');
-  const ssh1Commands = [
-    'pm2 kill',
-    'pm2 start /home/krobis/apps/fms-api-v2/api-system2.json'
+  const commands = [
+    { cmd: 'pm2 kill' },
+    { cmd: 'npm install', cwd: '/home/krobis/apps/fms-api-v2'},
+    { cmd: 'pm2 start /home/krobis/apps/fms-api-v2/api-system2.json' }
   ];
   const sshOptions = {
     host: '14.63.170.47',
@@ -83,7 +83,33 @@ command('git', ['pull'], { cwd: config.apiDevPath }).then(() => {
     username: 'krobis',
     privateKey: require('fs').readFileSync(config.rsaKeyPath)
   };
-  const ssh1 = new SshClient(sshOptions);
-  return ssh1.exec(ssh1Commands);
+  return executeSshCommands(sshOptions, commands);
 }).done();
 
+function executeSshCommands(sshOptions, commands) {
+  const sshConnect = require('ssh2-connect');
+  const exec = require('ssh2-exec');
+  const connectAsync = Promise.promisify(sshConnect);
+  const execAsync = Promise.promisify(exec);
+
+  let remoteSsh;
+  const firstCmd = commands[0];
+  const remainCmds = commands.slice(1);
+  return connectAsync(sshOptions).then(ssh => {
+    remoteSsh = ssh;
+    firstCmd.ssh = ssh;
+    return remainCmds.reduce((pre, current) => {
+      return pre.then((stdout, stderr) => {
+        console.log(stdout);
+        if (stderr) {
+          console.error(stderr);
+        }
+        current.ssh = ssh;
+        return execAsync(current);
+      });
+    }, execAsync(firstCmd));
+  }).then(stdout => {
+    console.log(stdout);
+    remoteSsh.end();
+  });
+}
