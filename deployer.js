@@ -16,9 +16,14 @@ class Deployer extends events.EventEmitter {
     files.forEach(file => {
       const currentFile = path.resolve(baseDir, file);
       const stats = fs.statSync(currentFile);
-      if (stats.isFile()) {
+      if (stats.isFile() &&
+          !currentFile.endsWith('.sql')) {
         this.files.push(currentFile);
-      } else if(stats.isDirectory() && !currentFile.endsWith('.git')) {
+      } else if(stats.isDirectory() &&
+                !currentFile.endsWith('db-modeling') &&
+                !currentFile.endsWith('.git') &&
+                !currentFile.endsWith('.vscode') &&
+                !currentFile.endsWith('node_modules')) {
         const workingFolder = path.resolve(baseDir, currentFile);
         this.addFiles(fs.readdirSync(workingFolder), workingFolder);
       }
