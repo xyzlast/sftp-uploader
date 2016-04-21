@@ -50,6 +50,7 @@ command('git', ['pull'], { cwd: config.apiDevPath }).then(() => {
   });
   return Promise.all(funcs);
 }).then(() => {
+  console.log('');
   if (param !== 'api' && param !== 'all') {
     return Promise.resolve(true);
   }
@@ -84,6 +85,9 @@ command('git', ['pull'], { cwd: config.apiDevPath }).then(() => {
     privateKey: require('fs').readFileSync(config.rsaKeyPath)
   };
   return executeSshCommands(sshOptions, commands);
+}).then(()=> {
+  console.log('');
+  console.log('deploy completed : ' + param);
 }).done();
 
 function executeSshCommands(sshOptions, commands) {
