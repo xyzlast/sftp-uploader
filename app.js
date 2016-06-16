@@ -30,23 +30,20 @@ command('git', ['pull'], { cwd: config.apiDevPath }).then(() => {
   }
   const funcs = [];
   targets.forEach(target => {
-    funcs.push(new Promise(resolve => {
-      const scpDeployer = new ScpDeployer(target);
-      scpDeployer.on('error', function(err){
-        if (err) {
-          console.error(err);
-        }
-        throw err;
-      })
-      .on('uploading', () => {
-        process.stdout.write('.');
-      })
-      .on('completed', () => {
-        process.stdout.write('O');
-        resolve(true);
-      });
-      scpDeployer.upload();
-    }));
+    const scpDeployer = new ScpDeployer(target);
+    scpDeployer.on('error', function(err){
+      if (err) {
+        console.error(err);
+      }
+      throw err;
+    })
+    .on('uploading', () => {
+      process.stdout.write('.');
+    })
+    .on('completed', () => {
+      process.stdout.write('O');
+    });
+    funcs.push(scpDeployer.upload());
   });
   return Promise.all(funcs);
 }).then(() => {

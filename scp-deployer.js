@@ -3,7 +3,8 @@ const fs = require('fs'),
   path = require('path'),
   scpClient = require('scp2').Client,
   bluebird = require('bluebird'),
-  events = require('events');
+  events = require('events'),
+  co = require('co');
 
 class ScpDeployer extends events.EventEmitter {
   constructor(options) {
@@ -16,18 +17,21 @@ class ScpDeployer extends events.EventEmitter {
     files.forEach(file => {
       const currentFile = path.resolve(baseDir, file);
       const stats = fs.statSync(currentFile);
-      if (stats.isFile() &&
-          !currentFile.endsWith('.sql')) {
+      if (stats.isFile() && !currentFile.endsWith('.sql')) {
         this.files.push(currentFile);
-      } else if(stats.isDirectory() &&
-                !currentFile.endsWith('db-modeling') &&
-                !currentFile.endsWith('.git') &&
-                !currentFile.endsWith('.vscode') &&
-                !currentFile.endsWith('node_modules')) {
+      } else if(this.checkUploadCondition(stats, currentFile)) {
         const workingFolder = path.resolve(baseDir, currentFile);
         this.addFiles(fs.readdirSync(workingFolder), workingFolder);
       }
     });
+  }
+
+  checkUploadCondition(stats, currentFile) {
+    return stats.isDirectory() &&
+           !currentFile.endsWith('db-modeling') &&
+           !currentFile.endsWith('.git') &&
+           !currentFile.endsWith('.vscode') &&
+           !currentFile.endsWith('node_modules');
   }
 
   uploadFiles() {
@@ -37,27 +41,26 @@ class ScpDeployer extends events.EventEmitter {
     });
     const totalFiles = this.files.length;
     let uploadFileCount = 0;
-    this.files.reduce((prev, file) => {
-      return prev.then(() => {
-        const localFile = path.relative(this.options.path, file);
-        const remoteFile = path.join(this.options.remotePath, localFile);
+    const me = this;
+    return co(function* () {
+      for(let file of me.files) {
+        const localFile = path.relative(me.options.path, file);
+        const remoteFile = path.join(me.options.remotePath, localFile);
         uploadFileCount++;
-        this.emit('uploading', {
+        me.emit('uploading', {
           file: file,
           percent: Math.round(uploadFileCount * 100 / totalFiles)
         });
-        return client.uploadAsync(file, remoteFile);
-      });
-    }, Promise.resolve('startArray')).then(() => {
-      this.emit('completed');
+        yield client.uploadAsync(file, remoteFile);
+      }
+      me.emit('completed');
       client.close();
     });
   }
 
   upload() {
     this.addFiles(fs.readdirSync(this.options.path), this.options.path);
-    this.uploadFiles();
-    return this;
+    return this.uploadFiles();
   }
 }
 
