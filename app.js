@@ -72,6 +72,26 @@ function uploadFiles() {
   return Promise.all(funcs);
 }
 
+function deleteOldFiles(serverName) {
+  const commands = [];
+  if (param === 'all') {
+    commands.push({ cmd: 'rm -drf ' + config.paths.api + '/app' });
+    commands.push({ cmd: 'rm -drf ' + config.paths.web });
+    commands.push({ cmd: 'rm -drf ' + config.paths.mobile });
+  } else if (param === 'api') {
+    commands.push({ cmd: 'rm -drf ' + config.paths.api + '/app' });
+  } else if (param === 'web') {
+    commands.push({ cmd: 'rm -drf ' + config.paths.web });
+  } else if (param === 'mobile') {
+    commands.push({ cmd: 'rm -drf ' + config.paths.mobile });
+  }
+  if (commands.length === 0) {
+    return Promise.resolve(true);
+  }
+  const sshOptions = config.getSshOptions(serverName);
+  return executeSshCommands(sshOptions, commands);
+}
+
 function restartPM2(serverName) {
   console.log('');
   if (param !== 'api' && param !== 'all' && param !== 'cmd') {
@@ -89,22 +109,17 @@ function restartPM2(serverName) {
       { cmd: 'pm2 start /home/krobis/apps/fms-api-v2/api-system2.json' }
     ]
   };
-  const sshOptionBundle = {
-    was1: { host: '14.63.170.47', port: 7010 },
-    was2: { host: '14.63.170.47', port: 7020 }
-  };
   console.log('');
   console.log('execute command to ' + serverName);
   const commands = commandBundle[serverName];
-  const sshOptions = sshOptionBundle[serverName];
-  sshOptions.username = 'krobis';
-  sshOptions.privateKey = require('fs').readFileSync(config.rsaKeyPath);
+  const sshOptions = config.getSshOptions(serverName);
   return executeSshCommands(sshOptions, commands);
 }
 
 function doProcess() {
   co(function * () {
     yield pullGitProcess();
+    yield deleteOldFiles();
     yield uploadFiles();
     yield restartPM2('was1');
     yield restartPM2('was2');
