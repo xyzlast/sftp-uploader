@@ -94,6 +94,14 @@ function deleteOldFiles(serverName) {
 
 function restartPM2(serverName) {
   console.log('');
+  if (process.argv.length <= 3) {
+    return Promise.resolve(true);
+  } else {
+    const del = process.argv[3].replace(/-/gi, '');
+    if (del !== 'del') return Promise.resolve(true);
+  }
+
+  console.log('delete old files');
   if (param !== 'api' && param !== 'all' && param !== 'cmd') {
     return Promise.resolve(true);
   }
