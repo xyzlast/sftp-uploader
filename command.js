@@ -3,6 +3,7 @@
 
 const Promise = require('bluebird');
 const spawn = require('child_process').spawn;
+
 function execute(cmd, option1, option2) {
   return new Promise(resolve => {
     const exec = spawn(cmd, option1, option2);
@@ -19,4 +20,6 @@ function execute(cmd, option1, option2) {
   });
 }
 
-module.exports = execute;
+module.exports = {
+  exec: execute
+};

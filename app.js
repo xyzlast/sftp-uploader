@@ -8,32 +8,17 @@ const config = require('./env/' + process.env.NODE_ENV);
 const param = process.argv[2].replace(/-/gi, '');
 const Promise = require('bluebird');
 const command = require('./command');
+const sshCommand = require('./sshCommand');
 const _ = require('lodash');
 const co = require('co');
 
-function executeSshCommands(sshOptions, commands) {
-  const sshConnect = require('ssh2-connect');
-  const exec = require('ssh2-exec');
-  const connectAsync = Promise.promisify(sshConnect);
-  const execAsync = Promise.promisify(exec);
-
+function executeLocalCommands() {
+  console.log(' > fms-api: git pull');
   return co(function * () {
-    const ssh = yield connectAsync(sshOptions);
-    for(let cmd of commands) {
-      cmd.ssh = ssh;
-      const stdout = yield execAsync(cmd);
-      console.log(stdout);
-    }
-    ssh.end();
-  });
-}
-
-function pullGitProcess() {
-  console.log('STEP1. fms-api: git pull');
-  return command('git', ['pull'], { cwd: config.apiDevPath }).then(() => {
+    yield command.exec('git', ['pull'], { cwd: config.apiDevPath });
     if (param === 'all' || param === 'web') {
-      console.log('STEP2. fms-web: grunt build');
-      return command('grunt', ['build'], { cwd: config.webDevPath });
+      console.log(' > fms-web: grunt build');
+      return yield command.exec('grunt', ['build'], { cwd: config.webDevPath });
     } else {
       return Promise.resolve(true);
     }
@@ -41,8 +26,8 @@ function pullGitProcess() {
 }
 
 function uploadFiles() {
-  console.log('STEP. UPLOAD FILES: ' + param);
   if (param === 'cmd') {
+    console.log(' > pass uploadFiles : ' + param);
     return Promise.resolve(true);
   }
   const ScpDeployer = require('./scp-deployer').ScpDeployer;
@@ -73,6 +58,16 @@ function uploadFiles() {
 }
 
 function deleteOldFiles(serverName) {
+  if (process.argv.length <= 3) {
+    console.log(' > pass deleteOldFiles : ' + process.argv);
+    return Promise.resolve(true);
+  } else {
+    const del = process.argv[3].replace(/-/gi, '');
+    if (del !== 'del') {
+      console.log(' > pass deleteOldFiles : ' + process.argv);
+      return Promise.resolve(true);
+    }
+  }
   const commands = [];
   if (param === 'all') {
     commands.push({ cmd: 'rm -drf ' + config.paths.api + '/app' });
@@ -89,20 +84,13 @@ function deleteOldFiles(serverName) {
     return Promise.resolve(true);
   }
   const sshOptions = config.getSshOptions(serverName);
-  return executeSshCommands(sshOptions, commands);
+  return sshCommand.exec(sshOptions, commands);
 }
 
 function restartPM2(serverName) {
   console.log('');
-  if (process.argv.length <= 3) {
-    return Promise.resolve(true);
-  } else {
-    const del = process.argv[3].replace(/-/gi, '');
-    if (del !== 'del') return Promise.resolve(true);
-  }
-
-  console.log('delete old files');
   if (param !== 'api' && param !== 'all' && param !== 'cmd') {
+    console.log('  > pass restartPM2:' + param);
     return Promise.resolve(true);
   }
   const commandBundle = {
@@ -121,14 +109,18 @@ function restartPM2(serverName) {
   console.log('execute command to ' + serverName);
   const commands = commandBundle[serverName];
   const sshOptions = config.getSshOptions(serverName);
-  return executeSshCommands(sshOptions, commands);
+  return sshCommand.exec(sshOptions, commands);
 }
 
 function doProcess() {
   co(function * () {
-    yield pullGitProcess();
+    console.log('1. Execute Local Commands');
+    yield executeLocalCommands();
+    console.log('2. Delete Old Files in Server');
     yield deleteOldFiles();
+    console.log('3. Upload Files');
     yield uploadFiles();
+    console.log('4. RestartPM2 processes');
     yield restartPM2('was1');
     yield restartPM2('was2');
     console.log('');
