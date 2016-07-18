@@ -5,19 +5,28 @@ if (process.argv.length < 3) {
   return;
 }
 const config = require('./env/' + process.env.NODE_ENV);
-const param = process.argv[2].replace(/-/gi, '');
 const Promise = require('bluebird');
 const command = require('./command');
 const sshCommand = require('./sshCommand');
 const _ = require('lodash');
 const co = require('co');
+require('colors');
+
+const cmdMode = !!_.find(process.argv, arg => {
+  return arg === '--cmd';
+});
+
+const param = _.find(process.argv, arg => {
+  return arg.indexOf('--target:') === 0;
+}).replace(/--target:/gi, '');
+console.log({cmdMode, param});
 
 function executeLocalCommands() {
-  console.log(' > fms-api: git pull');
+  console.log('> fms-api: git pull');
   return co(function * () {
     yield command.exec('git', ['pull'], { cwd: config.apiDevPath });
     if (param === 'all' || param === 'web') {
-      console.log(' > fms-web: grunt build');
+      console.log('> fms-web: grunt build');
       return yield command.exec('grunt', ['build'], { cwd: config.webDevPath });
     } else {
       return Promise.resolve(true);
@@ -26,8 +35,8 @@ function executeLocalCommands() {
 }
 
 function uploadFiles() {
-  if (param === 'cmd') {
-    console.log(' > pass uploadFiles : ' + param);
+  if (cmdMode) {
+    console.log('>> pass (cmdMode: true)');
     return Promise.resolve(true);
   }
   const ScpDeployer = require('./scp-deployer').ScpDeployer;
@@ -47,24 +56,28 @@ function uploadFiles() {
       throw err;
     })
     .on('uploading', () => {
-      process.stdout.write('.');
+      process.stdout.write('.'.green);
     })
     .on('completed', () => {
-      process.stdout.write('O');
+      process.stdout.write('O'.blue);
     });
     funcs.push(scpDeployer.upload());
   });
   return Promise.all(funcs);
 }
 
-function deleteOldFiles(serverName) {
+function deleteOldFiles(server) {
+  if (cmdMode) {
+    console.log('>> pass (cmdMode: true)');
+    return Promise.resolve(true);
+  }
   if (process.argv.length <= 3) {
-    console.log(' > pass deleteOldFiles : ' + process.argv);
+    console.log('> pass deleteOldFiles : ' + process.argv);
     return Promise.resolve(true);
   } else {
     const del = process.argv[3].replace(/-/gi, '');
     if (del !== 'del') {
-      console.log(' > pass deleteOldFiles : ' + process.argv);
+      console.log('> pass deleteOldFiles : ' + process.argv);
       return Promise.resolve(true);
     }
   }
@@ -83,32 +96,26 @@ function deleteOldFiles(serverName) {
   if (commands.length === 0) {
     return Promise.resolve(true);
   }
-  const sshOptions = config.getSshOptions(serverName);
+  const sshOptions = Object.assign({}, server);
+  sshOptions.privateKey = require('fs').readFileSync(config.rsaKeyPath);
   return sshCommand.exec(sshOptions, commands);
 }
 
-function restartPM2(serverName) {
-  console.log('');
-  if (param !== 'api' && param !== 'all' && param !== 'cmd') {
-    console.log('  > pass restartPM2:' + param);
+function restartPM2(server) {
+  if (!server.cwd || !server.pm2Script) {
+    console.log(' > pass restartPM2:' + param);
     return Promise.resolve(true);
   }
-  const commandBundle = {
-    was1: [
-      { cmd: 'pm2 kill' },
-      { cmd: 'npm install', cwd: '/home/krobis/apps/fms-api-v2'},
-      { cmd: 'pm2 start /home/krobis/apps/fms-api-v2/api-system1.json' }
-    ],
-    was2: [
-      { cmd: 'pm2 kill' },
-      { cmd: 'npm install', cwd: '/home/krobis/apps/fms-api-v2'},
-      { cmd: 'pm2 start /home/krobis/apps/fms-api-v2/api-system2.json' }
-    ]
-  };
+  const commandBundle = [
+    { cmd: 'pm2 kill' },
+    { cmd: 'npm install', cwd: server.cwd },
+    { cmd: 'pm2 start ' + server.pm2Script, cwd: server.cwd }
+  ];
   console.log('');
-  console.log('execute command to ' + serverName);
-  const commands = commandBundle[serverName];
-  const sshOptions = config.getSshOptions(serverName);
+  console.log('> execute command to ' + server.name);
+  const commands = commandBundle;
+  const sshOptions = Object.assign({}, server);
+  sshOptions.privateKey = require('fs').readFileSync(config.rsaKeyPath);
   return sshCommand.exec(sshOptions, commands);
 }
 
@@ -116,15 +123,17 @@ function doProcess() {
   co(function * () {
     console.log('1. Execute Local Commands');
     yield executeLocalCommands();
-    console.log('2. Delete Old Files in Server');
-    yield deleteOldFiles();
-    console.log('3. Upload Files');
+    // console.log('2. Delete Old Files in Server');
+    // yield deleteOldFiles();
+    console.log('2. Upload Files');
     yield uploadFiles();
-    console.log('4. RestartPM2 processes');
-    yield restartPM2('was1');
-    yield restartPM2('was2');
+    console.log('3. RestartPM2 processes');
+    const cmdTargets = _.filter(config.targets, target => target.name === param && target.cwd && target.pm2Script);
+    for(let target of cmdTargets) {
+      yield restartPM2(target);
+    }
     console.log('');
-    console.log('deploy completed : ' + param);
+    console.log('=== deploy completed : ' + param + ' ===');
   });
 }
 
