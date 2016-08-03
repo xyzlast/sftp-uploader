@@ -9,13 +9,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "async": "^2.0.0-rc.3",
+    "async": "^2.0.1",
     "bluebird": "^3.3.5",
     "co": "^4.6.0",
     "colors": "^1.1.2",
-    "lodash": "^4.11.1",
+    "dateformat": "^1.0.12",
+    "lodash": "^4.14.0",
     "rxjs": "^5.0.0-beta.6",
-    "scp2": "^0.3.0",
+    "scp2": "^0.5.0",
     "ssh2-connect": "^1.0.0",
     "ssh2-exec": "^0.3.1"
   }

@@ -10,7 +10,8 @@ const production = {
 };
 
 const rsaKeyPath = '/home/ykyoon/.ssh/id_rsa';
-const apiDevPath = '/home/ykyoon/dev/work/pub/fms-api-v2';
+// const apiDevPath = '/home/ykyoon/dev/work/pub/fms-api-v2';
+const apiDevPath = '/home/ykyoon/dev/work/fms-api-v2';
 const webDevPath = '/home/ykyoon/dev/work/fms-web-v2';
 const mobileDevPath = '/home/ykyoon/dev/work/fms-mobile-v2';
 
@@ -105,6 +106,26 @@ const targets = [
     password: 'qwer12#$',
     path: localMobilePath,
     remotePath: '/home/main/apps/krofarm-mobile'
+  },
+  {
+    name: 'api.kaz',
+    host: '192.168.30.223',
+    port: 22,
+    username: 'krobis',
+    password: 'qwer12#$',
+    path: apiDevPath,
+    remotePath: '/home/krobis/apps/fms-api-v2',
+    cwd: '/home/krobis/apps/fms-api-v2',
+    pm2Script: 'pm2/kaz-system.json'
+  },
+  {
+    name: 'web.kaz',
+    host: '192.168.30.223',
+    port: 22,
+    username: 'krobis',
+    password: 'qwer12#$',
+    path: localWebDistPath,
+    remotePath: '/home/krobis/apps/krofarm'
   }
 ];
 

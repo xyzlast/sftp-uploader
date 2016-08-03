@@ -10,6 +10,7 @@ const command = require('./command');
 const sshCommand = require('./sshCommand');
 const _ = require('lodash');
 const co = require('co');
+const dateformat = require('dateformat');
 require('colors');
 
 const cmdMode = !!_.find(process.argv, arg => {
@@ -21,17 +22,40 @@ const param = _.find(process.argv, arg => {
 }).replace(/--target:/gi, '');
 console.log({cmdMode, param});
 
-function executeLocalCommands() {
-  console.log('> fms-api: git pull');
-  return co(function * () {
-    yield command.exec('git', ['pull'], { cwd: config.apiDevPath });
-    if (param === 'all' || param === 'web') {
-      console.log('> fms-web: grunt build');
-      return yield command.exec('grunt', ['build'], { cwd: config.webDevPath });
-    } else {
-      return Promise.resolve(true);
+function writeReleaseLog() {
+  const fs = require('fs');
+  const targets = _.filter(config.targets, target => target.name === param);
+  const now = new Date();
+  const LINE_END = '\n\r';
+  let log = '## ' + dateformat(now, 'yyyy-mm-dd HH:MM:ss') + LINE_END;
+  return co(function* () {
+    for (let target of targets) {
+      const filename = target.path + '/release-history.txt';
+      log += `* host: ${target.username}@${target.host}:${target.port}:${target.remotePath}` + LINE_END;
+      if (target.pm2Script) {
+        log += ` * script: ${target.pm2Script}` + LINE_END;
+      }
+      const stream = Promise.promisifyAll(fs.createWriteStream(filename, { flags: 'a' }));
+      yield stream.writeAsync(log);
+      stream.close();
     }
   });
+}
+
+
+function executeLocalCommands() {
+  console.log('> fms-api: git pull');
+  return Promise.resolve(true);
+
+  // return co(function * () {
+  //   yield command.exec('git', ['pull'], { cwd: config.apiDevPath });
+  //   if (param === 'all' || param.indexOf('web') >= 0) {
+  //     console.log('> fms-web: grunt build');
+  //     return yield command.exec('grunt', ['build'], { cwd: config.webDevPath });
+  //   } else {
+  //     return Promise.resolve(true);
+  //   }
+  // });
 }
 
 function uploadFiles() {
@@ -108,6 +132,7 @@ function restartPM2(server) {
   }
   const commandBundle = [
     { cmd: 'pm2 kill' },
+    { cmd: 'pm2 flush' },
     { cmd: 'npm install', cwd: server.cwd },
     { cmd: 'pm2 start ' + server.pm2Script, cwd: server.cwd }
   ];
@@ -121,6 +146,7 @@ function restartPM2(server) {
 
 function doProcess() {
   co(function * () {
+    yield writeReleaseLog();
     console.log('1. Execute Local Commands');
     yield executeLocalCommands();
     // console.log('2. Delete Old Files in Server');
