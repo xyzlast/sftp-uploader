@@ -45,17 +45,17 @@ function writeReleaseLog() {
 
 function executeLocalCommands() {
   console.log('> fms-api: git pull');
-  return Promise.resolve(true);
+  // return Promise.resolve(true);
 
-  // return co(function * () {
-  //   yield command.exec('git', ['pull'], { cwd: config.apiDevPath });
-  //   if (param === 'all' || param.indexOf('web') >= 0) {
-  //     console.log('> fms-web: grunt build');
-  //     return yield command.exec('grunt', ['build'], { cwd: config.webDevPath });
-  //   } else {
-  //     return Promise.resolve(true);
-  //   }
-  // });
+  return co(function * () {
+    // yield command.exec('git', ['pull'], { cwd: config.apiDevPath });
+    if (param === 'all' || param.indexOf('web') >= 0) {
+      console.log('> fms-web: grunt build');
+      return yield command.exec('grunt', ['build'], { cwd: config.webDevPath });
+    } else {
+      return Promise.resolve(true);
+    }
+  });
 }
 
 function uploadFiles() {

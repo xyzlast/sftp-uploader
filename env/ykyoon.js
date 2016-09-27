@@ -5,7 +5,7 @@ const production = {
   port1: '7010',
   port2: '7020',
   username: 'krobis',
-  password: 'norooKrobis',
+  password: 'qwer12#$',
   remoteBasePath: '/home/krobis/apps'
 };
 
@@ -126,6 +126,15 @@ const targets = [
     password: 'qwer12#$',
     path: localWebDistPath,
     remotePath: '/home/krobis/apps/krofarm'
+  },
+  {
+    name: 'mobile.kaz',
+    host: '192.168.30.223',
+    port: 22,
+    username: 'krobis',
+    password: 'qwer12#$',
+    path: localMobilePath,
+    remotePath: '/home/krobis/apps/krofarm-mobile'
   }
 ];
 
