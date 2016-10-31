@@ -51,7 +51,7 @@ function executeLocalCommands() {
     // yield command.exec('git', ['pull'], { cwd: config.apiDevPath });
     if (param === 'all' || param.indexOf('web') >= 0) {
       console.log('> fms-web: grunt build');
-      return yield command.exec('grunt', ['build'], { cwd: config.webDevPath });
+      return yield command.exec('grunt', ['build', '--force'], { cwd: config.webDevPath });
     } else {
       return Promise.resolve(true);
     }
@@ -149,11 +149,11 @@ function doProcess() {
     yield writeReleaseLog();
     console.log('1. Execute Local Commands');
     yield executeLocalCommands();
-    // console.log('2. Delete Old Files in Server');
+    console.log('2. Delete Old Files in Server');
     // yield deleteOldFiles();
-    console.log('2. Upload Files');
+    console.log('3. Upload Files');
     yield uploadFiles();
-    console.log('3. RestartPM2 processes');
+    console.log('4. RestartPM2 processes');
     const cmdTargets = _.filter(config.targets, target => target.name === param && target.cwd && target.pm2Script);
     for(let target of cmdTargets) {
       yield restartPM2(target);
