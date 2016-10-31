@@ -133,7 +133,8 @@ function restartPM2(server) {
   const commandBundle = [
     { cmd: 'pm2 kill' },
     { cmd: 'pm2 flush' },
-    { cmd: 'npm install', cwd: server.cwd },
+    // { cmd: 'npm install', cwd: server.cwd },
+    { cmd: 'yarn upgrade', cwd: server.cwd },    
     { cmd: 'pm2 start ' + server.pm2Script, cwd: server.cwd }
   ];
   console.log('');
