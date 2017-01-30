@@ -13,6 +13,7 @@
     "bluebird": "^3.3.5",
     "co": "^4.6.0",
     "colors": "^1.1.2",
+    "commander": "^2.9.0",
     "dateformat": "^1.0.12",
     "lodash": "^4.14.0",
     "rxjs": "^5.0.0-beta.6",

@@ -67,7 +67,10 @@ const targets = [
     username: production.username,
     password: production.password,
     path: localMobilePath,
-    remotePath: production.remoteBasePath + '/krofarm-mobile'
+    remotePath: production.remoteBasePath + '/krofarm-mobile',
+    excludes: [
+      'js/config.constant.js'
+    ]
   },
   {
     name: 'mobile',
@@ -76,7 +79,10 @@ const targets = [
     username: production.username,
     password: production.password,
     path: localMobilePath,
-    remotePath: production.remoteBasePath + '/krofarm-mobile'
+    remotePath: production.remoteBasePath + '/krofarm-mobile',
+    excludes: [
+      'js/config.constant.js'
+    ]
   },
   {
     name: 'api.dev',
@@ -135,7 +141,66 @@ const targets = [
     password: 'qwer12#$',
     path: localMobilePath,
     remotePath: '/home/krobis/apps/krofarm-mobile'
-  }
+  },
+  {
+    name: 'api.kist',
+    host: '192.168.30.223',
+    port: 22,
+    username: 'krofarm',
+    password: 'qwer12#$',
+    path: '/home/ykyoon/dev/work/fms-api-v2',
+    remotePath: '/home/krofarm/apps/fms-api-v2',
+    cwd: '/home/krofarm/apps/fms-api-v2',
+    pm2Script: 'pm2/kist-system.json'
+  },
+  {
+    name: 'web.kist',
+    host: '192.168.30.223',
+    port: 22,
+    username: 'krofarm',
+    password: 'qwer12#$',
+    path: localWebDistPath,
+    remotePath: '/home/krofarm/apps/krofarm'
+  },
+  {
+    name: 'mobile.kist',
+    host: '192.168.30.223',
+    port: 22,
+    username: 'krofarm',
+    password: 'qwer12#$',
+    path: localMobilePath,
+    remotePath: '/home/krofarm/apps/krofarm-mobile'
+  },
+  //세종 설치 서버용 설정들
+  {
+    name: 'api.kist2',
+    host: '192.168.30.223',
+    port: 22,
+    username: 'krobis',
+    password: 'qwer12#$',
+    path: '/home/ykyoon/dev/work/fms-api-v2',
+    remotePath: '/home/krobis/apps/fms-api-v2',
+    cwd: '/home/krobis/apps/fms-api-v2',
+    pm2Script: 'pm2/local-system.json'
+  },
+  {
+    name: 'web.kist2',
+    host: '192.168.30.223',
+    port: 22,
+    username: 'krobis',
+    password: 'qwer12#$',
+    path: localWebDistPath,
+    remotePath: '/home/krobis/apps/krofarm'
+  },
+  {
+    name: 'mobile.kist2',
+    host: '192.168.30.223',
+    port: 22,
+    username: 'krobis',
+    password: 'qwer12#$',
+    path: localMobilePath,
+    remotePath: '/home/krobis/apps/krofarm-mobile'
+  },
 ];
 
 class Config {

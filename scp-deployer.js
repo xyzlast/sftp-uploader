@@ -18,7 +18,17 @@ class ScpDeployer extends events.EventEmitter {
       const currentFile = path.resolve(baseDir, file);
       const stats = fs.statSync(currentFile);
       if (stats.isFile() && !currentFile.endsWith('.sql')) {
-        this.files.push(currentFile);
+        let excluded = false;
+        if (this.options.excludes) {
+          this.options.excludes.forEach(excludeFileName => {
+            excluded = excluded || currentFile.endsWith(excludeFileName);
+          });
+        }
+        if (!excluded) {
+          this.files.push(currentFile);
+        } else {
+          console.log('exculded > ' + currentFile);
+        }
       } else if(this.checkUploadCondition(stats, currentFile)) {
         const workingFolder = path.resolve(baseDir, currentFile);
         this.addFiles(fs.readdirSync(workingFolder), workingFolder);
